@@ -1,0 +1,137 @@
+import os
+import pandas as pd
+from sqlalchemy import create_engine, text, Table, MetaData, Column, Integer, String, Float, ForeignKey, insert, update, select, func
+from sqlalchemy.orm import declarative_base, relationship, sessionmaker, mapped_column, Mapped
+
+if os.path.exists('sistema_rh.db'):
+    os.remove('sistema_rh.db')
+
+engine = create_engine('sqlite:///sistema_rh.db')
+
+
+with engine.begin() as conn:
+    conn.execute(text("""
+        CREATE TABLE funcionarios (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            cargo TEXT NOT NULL,
+            salario REAL NOT NULL
+        )
+    """))
+
+novo_funcionario = {'nome': 'Ana Silva', 'cargo': 'Desenvolvedor Júnior', 'salario': 4200.00}
+
+with engine.begin() as conn:
+    conn.execute(
+        text("INSERT INTO funcionarios (nome, cargo, salario) VALUES (:nome, :cargo, :salario)"),
+        novo_funcionario,
+    )
+
+df_funcionarios = pd.read_sql_query("SELECT * FROM funcionarios", engine)
+print(df_funcionarios)
+
+
+metadata = MetaData()
+
+projetos = Table(
+    'projetos',
+    metadata,
+    Column('id', Integer, primary_key=True, autoincrement=True),
+    Column('nome_projeto', String, nullable=False),
+    Column('orcamento', Float, nullable=False),
+)
+
+metadata.create_all(engine)
+
+lista_projetos = [
+    {'nome_projeto': 'Migração de Sistema', 'orcamento': 85000.00},
+    {'nome_projeto': 'App Mobile RH', 'orcamento': 42000.00},
+    {'nome_projeto': 'Dashboard de Indicadores', 'orcamento': 15000.00},
+]
+
+with engine.begin() as conn:
+    conn.execute(insert(projetos), lista_projetos)
+
+funcionarios_extra = [
+    {'nome': 'Bruno Costa', 'cargo': 'Desenvolvedor Júnior', 'salario': 4100.00},
+    {'nome': 'Carla Dias', 'cargo': 'Desenvolvedor Pleno', 'salario': 6800.00},
+    {'nome': 'Diego Melo', 'cargo': 'Desenvolvedor Júnior', 'salario': 4300.00},
+]
+
+with engine.begin() as conn:
+    for f in funcionarios_extra:
+        conn.execute(
+            text("INSERT INTO funcionarios (nome, cargo, salario) VALUES (:nome, :cargo, :salario)"),
+            f,
+        )
+
+metadata_funcionarios = MetaData()
+tabela_funcionarios = Table('funcionarios', metadata_funcionarios, autoload_with=engine)
+
+with engine.begin() as conn:
+    conn.execute(
+        update(tabela_funcionarios)
+        .where(tabela_funcionarios.c.cargo == 'Desenvolvedor Júnior')
+        .values(salario=tabela_funcionarios.c.salario * 1.10)
+    )
+
+with engine.connect() as conn:
+    relatorio = conn.execute(
+        select(
+            tabela_funcionarios.c.cargo,
+            func.avg(tabela_funcionarios.c.salario).label('salario_medio'),
+        ).group_by(tabela_funcionarios.c.cargo)
+    ).all()
+
+df_relatorio = pd.DataFrame(relatorio, columns=['cargo', 'salario_medio'])
+print(df_relatorio)
+
+
+Base = declarative_base()
+
+
+class Departamento(Base):
+    __tablename__ = 'departamentos'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    nome: Mapped[str] = mapped_column(String, nullable=False)
+
+    funcionarios: Mapped[list['FuncionarioORM']] = relationship(back_populates='departamento')
+
+
+class FuncionarioORM(Base):
+    __tablename__ = 'funcionarios_orm'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    nome: Mapped[str] = mapped_column(String, nullable=False)
+    cargo: Mapped[str] = mapped_column(String, nullable=False)
+    salario: Mapped[float] = mapped_column(Float, nullable=False)
+    departamento_id: Mapped[int] = mapped_column(ForeignKey('departamentos.id'))
+
+    departamento: Mapped['Departamento'] = relationship(back_populates='funcionarios')
+
+
+Base.metadata.create_all(engine)
+
+Sessao = sessionmaker(bind=engine)
+sessao = Sessao()
+
+depto_ti = Departamento(nome='TI')
+depto_ti.funcionarios = [
+    FuncionarioORM(nome='Elaine Rocha', cargo='Analista de Sistemas', salario=7200.00),
+    FuncionarioORM(nome='Fábio Nunes', cargo='DBA', salario=8100.00),
+]
+
+sessao.add(depto_ti)
+sessao.commit()
+
+funcionarios_ti = sessao.execute(
+    select(FuncionarioORM)
+    .join(Departamento)
+    .where(Departamento.nome == 'TI')
+).scalars().all()
+
+for f in funcionarios_ti:
+    print(f.nome, f.cargo, f.salario)
+
+sessao.close()
