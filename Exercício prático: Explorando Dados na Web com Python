@@ -1,0 +1,71 @@
+import io
+import requests
+import pandas as pd
+from bs4 import BeautifulSoup
+
+HEADERS = {'User-Agent': 'ProjetoEstudoWebData/1.0'}
+
+
+resposta = requests.get('https://jsonplaceholder.typicode.com/posts', headers=HEADERS, timeout=10)
+
+resposta_filtrada = requests.get(
+    'https://jsonplaceholder.typicode.com/posts',
+    params={'userId': 2},
+    headers=HEADERS,
+    timeout=10,
+)
+
+print(resposta.status_code)
+print(resposta_filtrada.url)
+
+
+ceps = ['01310-100', '20040-020', '30130-000']
+registros_cep = []
+
+for cep in ceps:
+    r = requests.get(f'https://viacep.com.br/ws/{cep}/json/', headers=HEADERS, timeout=10)
+    registros_cep.append(r.json())
+
+df_ceps = pd.DataFrame(registros_cep)
+print(df_ceps)
+
+
+def baixar_arquivo(url, caminho_saida):
+    try:
+        r = requests.get(url, headers=HEADERS, timeout=10)
+        r.raise_for_status()
+        with open(caminho_saida, 'wb') as f:
+            f.write(r.content)
+        print(f'Download concluído: {caminho_saida}')
+    except requests.exceptions.RequestException as erro:
+        print(f'Falha ao baixar o arquivo: {erro}')
+
+
+baixar_arquivo('https://picsum.photos/400/400', '/mnt/user-data/outputs/imagem_aleatoria.jpg')
+
+
+robots = requests.get('https://books.toscrape.com/robots.txt', headers=HEADERS, timeout=10)
+print(robots.text)
+
+pagina = requests.get('https://books.toscrape.com/', headers=HEADERS, timeout=10)
+soup = BeautifulSoup(pagina.text, 'html.parser')
+
+livros = soup.select('article.product_pod')[:5]
+
+dados_livros = []
+for livro in livros:
+    titulo = livro.h3.a['title']
+    preco = livro.select_one('p.price_color').text
+    dados_livros.append({'titulo': titulo, 'preco': preco})
+
+df_livros = pd.DataFrame(dados_livros)
+df_livros.to_csv('/mnt/user-data/outputs/livros_scraping.csv', index=False)
+print(df_livros)
+
+
+url_wiki = 'https://en.wikipedia.org/wiki/List_of_countries_by_population_(United_Nations)'
+resposta_wiki = requests.get(url_wiki, headers=HEADERS, timeout=10)
+
+tabelas = pd.read_html(io.StringIO(resposta_wiki.text))
+df_populacao = tabelas[0]
+print(df_populacao.head())
