@@ -1,0 +1,80 @@
+import pandas as pd
+import numpy as np
+import folium
+from folium.plugins import MarkerCluster
+
+np.random.seed(42)
+n_imoveis = 45
+
+dados_imoveis = {
+    'id_imovel': range(1, n_imoveis + 1),
+    'cidade': np.where(np.random.rand(n_imoveis) > 0.4, 'Nova Iguaçu', 'Queimados'),
+    'valor_venda': np.random.uniform(150000, 850000, n_imoveis).round(2),
+    'tipo': np.random.choice(['Casa', 'Apartamento', 'Terreno'], n_imoveis)
+}
+
+df_mapa = pd.DataFrame(dados_imoveis)
+
+def gerar_lat(cidade):
+    if cidade == 'Nova Iguaçu':
+        return -22.756 + np.random.uniform(-0.03, 0.03)
+    return -22.716 + np.random.uniform(-0.02, 0.02)
+
+def gerar_lon(cidade):
+    if cidade == 'Nova Iguaçu':
+        return -43.460 + np.random.uniform(-0.03, 0.03)
+    return -43.555 + np.random.uniform(-0.02, 0.02)
+
+df_mapa['latitude'] = df_mapa['cidade'].apply(gerar_lat)
+df_mapa['longitude'] = df_mapa['cidade'].apply(gerar_lon)
+
+
+centro_lat = df_mapa['latitude'].mean()
+centro_lon = df_mapa['longitude'].mean()
+
+mapa_basico = folium.Map(location=[centro_lat, centro_lon], zoom_start=12, tiles='OpenStreetMap')
+
+for _, imovel in df_mapa.head(5).iterrows():
+    popup_texto = f"{imovel['tipo']} - R$ {imovel['valor_venda']:,.2f}"
+    folium.Marker(
+        location=[imovel['latitude'], imovel['longitude']],
+        popup=popup_texto,
+    ).add_to(mapa_basico)
+
+mapa_basico.save('/mnt/user-data/outputs/mapa_basico.html')
+
+
+mapa_circulos = folium.Map(location=[centro_lat, centro_lon], zoom_start=12, tiles='OpenStreetMap')
+
+cores_cidade = {'Nova Iguaçu': 'blue', 'Queimados': 'orange'}
+
+for _, imovel in df_mapa.iterrows():
+    folium.CircleMarker(
+        location=[imovel['latitude'], imovel['longitude']],
+        radius=8,
+        color=cores_cidade[imovel['cidade']],
+        fill=True,
+        fill_color=cores_cidade[imovel['cidade']],
+        fill_opacity=0.7,
+        tooltip='Clique para detalhes',
+    ).add_to(mapa_circulos)
+
+mapa_circulos.save('/mnt/user-data/outputs/mapa_circulos.html')
+
+
+mapa_cluster = folium.Map(location=[centro_lat, centro_lon], zoom_start=12, tiles='OpenStreetMap')
+cluster = MarkerCluster().add_to(mapa_cluster)
+
+cores_tipo = {'Casa': 'green', 'Apartamento': 'blue', 'Terreno': 'gray'}
+
+for _, imovel in df_mapa.iterrows():
+    popup_texto = f"{imovel['tipo']} - {imovel['cidade']}<br>R$ {imovel['valor_venda']:,.2f}"
+    folium.Marker(
+        location=[imovel['latitude'], imovel['longitude']],
+        popup=popup_texto,
+        icon=folium.Icon(color=cores_tipo[imovel['tipo']]),
+    ).add_to(cluster)
+
+mapa_cluster.save('/mnt/user-data/outputs/mapa_imoveis_baixada.html')
+
+print('Mapas gerados com sucesso.')
