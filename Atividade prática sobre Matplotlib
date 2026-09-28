@@ -1,0 +1,199 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+np.random.seed(42)
+n_registros = 120
+
+datas = pd.date_range(start='2024-01-01', periods=n_registros, freq='D')
+categorias = ['Eletronicos', 'Livros', 'Roupas', 'Automotivo']
+estados = ['SP', 'RJ', 'MG', 'RS', 'BA']
+
+dados = {
+    'data': datas,
+    'categoria': np.random.choice(categorias, size=n_registros),
+    'estado': np.random.choice(estados, size=n_registros),
+    'valor': np.random.uniform(50, 4500, size=n_registros).round(2),
+    'quantidade': np.random.randint(1, 15, size=n_registros),
+}
+
+df = pd.DataFrame(dados)
+df['valor_venda'] = (df['valor'] * np.random.uniform(0.9, 1.1, size=n_registros)).round(2)
+df_indexado = df.set_index('data')
+
+OUT = '/mnt/user-data/outputs/'
+
+
+faturamento_mensal = df_indexado['valor_venda'].resample('ME').sum()
+
+fig1, ax = plt.subplots(figsize=(9, 5))
+ax.plot(
+    faturamento_mensal.index,
+    faturamento_mensal.values,
+    marker='o',
+    linestyle='--',
+    color='#2E86AB',
+    linewidth=2,
+    markersize=7,
+)
+ax.set_title('Faturamento Mensal Total')
+ax.set_xlabel('Mês')
+ax.set_ylabel('Faturamento (R$)')
+ax.grid(True, alpha=0.4)
+fig1.autofmt_xdate(rotation=45)
+fig1.tight_layout()
+fig1.savefig(OUT + 'parte1_faturamento_mensal.png', dpi=150, bbox_inches='tight')
+
+
+vendas_por_categoria = df.groupby('categoria')['valor_venda'].sum().sort_values()
+
+fig2, ax = plt.subplots(figsize=(8, 5))
+ax.bar(vendas_por_categoria.index, vendas_por_categoria.values, color='#A23B72')
+ax.set_title('Total de Vendas por Categoria (crescente)')
+ax.set_xlabel('Categoria')
+ax.set_ylabel('Total de Vendas (R$)')
+plt.setp(ax.get_xticklabels(), rotation=45, ha='right')
+ax.grid(axis='y', alpha=0.3)
+fig2.tight_layout()
+fig2.savefig(OUT + 'parte1_vendas_por_categoria.png', dpi=150, bbox_inches='tight')
+
+
+fig3, ax = plt.subplots(figsize=(8, 5))
+ax.hist(df['valor'], bins=10, edgecolor='black', color='#F18F01')
+ax.set_title('Distribuição dos Valores de Venda')
+ax.set_xlabel('Valor (R$)')
+ax.set_ylabel('Frequência')
+ax.grid(axis='y', alpha=0.3)
+fig3.tight_layout()
+fig3.savefig(OUT + 'parte1_histograma_valor.png', dpi=150, bbox_inches='tight')
+
+
+quantidade_mensal = df_indexado['quantidade'].resample('ME').sum()
+
+fig4, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(9, 7))
+
+ax1.plot(
+    faturamento_mensal.index,
+    faturamento_mensal.values,
+    marker='o',
+    linestyle='-',
+    color='#2E86AB',
+    linewidth=2,
+)
+ax1.set_ylabel('Faturamento (R$)')
+ax1.set_title('Faturamento Mensal x Quantidade de Itens Vendidos')
+ax1.grid(True, alpha=0.4)
+
+ax2.bar(quantidade_mensal.index, quantidade_mensal.values, width=20, color='#3B8686')
+ax2.set_xlabel('Mês')
+ax2.set_ylabel('Itens Vendidos')
+ax2.grid(axis='y', alpha=0.3)
+
+fig4.autofmt_xdate(rotation=45)
+fig4.tight_layout()
+fig4.savefig(OUT + 'parte2_subplots_2x1.png', dpi=150, bbox_inches='tight')
+
+
+qtd_media_mensal = df_indexado['quantidade'].resample('ME').mean()
+
+fig5, ax_primario = plt.subplots(figsize=(9, 5))
+
+ax_primario.bar(
+    faturamento_mensal.index,
+    faturamento_mensal.values,
+    width=20,
+    color='#88B04B',
+    alpha=0.7,
+    label='Valor total vendido',
+)
+ax_primario.set_xlabel('Mês')
+ax_primario.set_ylabel('Valor Total Vendido (R$)', color='#4C7A2A')
+ax_primario.tick_params(axis='y', labelcolor='#4C7A2A')
+
+ax_secundario = ax_primario.twinx()
+ax_secundario.plot(
+    qtd_media_mensal.index,
+    qtd_media_mensal.values,
+    marker='o',
+    linestyle='-',
+    color='#C0392B',
+    linewidth=2,
+    label='Quantidade média por venda',
+)
+ax_secundario.set_ylabel('Quantidade Média por Venda', color='#C0392B')
+ax_secundario.tick_params(axis='y', labelcolor='#C0392B')
+
+fig5.suptitle('Valor Total Vendido x Quantidade Média por Venda (Mensal)')
+fig5.autofmt_xdate(rotation=45)
+fig5.tight_layout()
+fig5.savefig(OUT + 'parte2_twinx.png', dpi=150, bbox_inches='tight')
+
+
+mes_pico = faturamento_mensal.idxmax()
+valor_pico = faturamento_mensal.max()
+
+fig6, ax = plt.subplots(figsize=(9, 5))
+ax.plot(
+    faturamento_mensal.index,
+    faturamento_mensal.values,
+    marker='o',
+    linestyle='--',
+    color='#2E86AB',
+    linewidth=2,
+)
+ax.set_title('Faturamento Mensal com Destaque para o Pico')
+ax.set_xlabel('Mês')
+ax.set_ylabel('Faturamento (R$)')
+ax.grid(True, alpha=0.4)
+
+ax.annotate(
+    f'Pico: R$ {valor_pico:,.2f}\n({mes_pico.strftime("%b/%Y")})',
+    xy=(mes_pico, valor_pico),
+    xytext=(20, 30),
+    textcoords='offset points',
+    arrowprops=dict(facecolor='black', arrowstyle='->', connectionstyle='arc3,rad=0.2'),
+    fontsize=10,
+    bbox=dict(boxstyle='round,pad=0.4', fc='yellow', alpha=0.7),
+)
+
+fig6.autofmt_xdate(rotation=45)
+fig6.tight_layout()
+fig6.savefig(OUT + 'parte2_anotacao_pico.png', dpi=150, bbox_inches='tight')
+
+
+pivot = pd.pivot_table(
+    df,
+    values='valor_venda',
+    index='categoria',
+    columns='estado',
+    aggfunc='sum',
+    fill_value=0,
+)
+
+fig7, ax = plt.subplots(figsize=(8, 6))
+im = ax.imshow(pivot.values, cmap='YlOrRd', aspect='auto')
+
+cbar = plt.colorbar(im, ax=ax)
+cbar.set_label('Total de Vendas (R$)')
+
+ax.set_xticks(np.arange(len(pivot.columns)))
+ax.set_xticklabels(pivot.columns)
+ax.set_yticks(np.arange(len(pivot.index)))
+ax.set_yticklabels(pivot.index)
+
+for i in range(len(pivot.index)):
+    for j in range(len(pivot.columns)):
+        valor_celula = pivot.values[i, j]
+        cor_texto = 'white' if valor_celula > pivot.values.max() * 0.5 else 'black'
+        ax.text(j, i, f'{valor_celula:,.0f}', ha='center', va='center', color=cor_texto, fontsize=8)
+
+ax.set_title('Heatmap — Total de Vendas por Categoria x Estado')
+ax.set_xlabel('Estado')
+ax.set_ylabel('Categoria')
+fig7.tight_layout()
+fig7.savefig(OUT + 'heatmap_vendas.png', dpi=300, bbox_inches='tight')
+
+print('Todas as figuras foram geradas com sucesso em', OUT)
+print('\nTabela dinâmica (categoria x estado):')
+print(pivot)
+print(f'\nMês de maior faturamento: {mes_pico.strftime("%B/%Y")} — R$ {valor_pico:,.2f}')
