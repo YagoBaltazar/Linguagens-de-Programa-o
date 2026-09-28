@@ -1,0 +1,88 @@
+import numpy as np
+
+
+pecas_vendidas = np.array([150, 120, 90, 210, 300, 250, 180])
+
+faturamento_diario = pecas_vendidas * 50
+print(faturamento_diario)
+
+dias_pico = pecas_vendidas[pecas_vendidas > 200]
+print(dias_pico)
+
+
+vendas_filiais = np.array([
+    [200, 220, np.nan, 250],
+    [150, 180, 160, 190],
+    [300, 310, 290, 330],
+])
+
+total_por_loja = np.sum(vendas_filiais, axis=1)
+print(total_por_loja)
+
+media_geral = np.nanmean(vendas_filiais)
+print(media_geral)
+
+status_metas = np.where(vendas_filiais >= 200, 'Meta Atingida', 'Abaixo')
+print(status_metas)
+
+
+rng = np.random.default_rng(42)
+vendas_departamentos = rng.choice(['Eletrônicos', 'Roupas', 'Casa'], size=50)
+
+departamentos, contagens = np.unique(vendas_departamentos, return_counts=True)
+print(departamentos, contagens)
+
+faturamento_campanhas = np.array([12000, 45000, 23000, 89000, 31000])
+campanha_campea = np.argmax(faturamento_campanhas)
+print(campanha_campea)
+
+
+dias_mes = np.arange(1, 31)
+
+metas_semana = np.linspace(20000, 30000, 5)
+print(metas_semana)
+
+estoque_decimal = np.array([10.5, 20.1, 30.9])
+estoque_inteiro = estoque_decimal.astype(int)
+print(estoque_inteiro)
+
+ultimos_5_dias = dias_mes[-5:][::-1]
+print(ultimos_5_dias)
+
+
+visitas_portal = np.arange(1, 13) * 1000
+
+visitas_trimestres = visitas_portal.reshape(4, 3)
+print(visitas_trimestres)
+
+primeiro_semestre = visitas_trimestres[:2]
+segundo_semestre = visitas_trimestres[2:]
+visitas_ano = np.vstack([primeiro_semestre, segundo_semestre])
+print(visitas_ano)
+
+projecao_trimestre1 = visitas_trimestres[:1].copy()
+projecao_trimestre1[0, 0] = 999999
+print(projecao_trimestre1)
+print(visitas_trimestres)
+
+visitas_achatadas = visitas_trimestres.ravel()
+print(visitas_achatadas)
+
+
+notas_alunos = np.array([85, 92, 78, 95, 88])
+ranking = np.argsort(notas_alunos)
+print(ranking)
+
+precos_base = np.array([100, 200, 300])
+precos_coluna = precos_base[:, np.newaxis]
+descontos = np.array([0.9, 0.8, 0.7])
+matriz_precos_com_desconto = precos_coluna * descontos
+print(matriz_precos_com_desconto)
+
+A = np.array([
+    [2, 1],
+    [1, -1],
+])
+b = np.array([500, 100])
+preco_placa, preco_sensor = np.linalg.solve(A, b)
+print(preco_placa, preco_sensor)
