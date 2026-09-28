@@ -1,0 +1,104 @@
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+sns.set_theme(style="whitegrid", palette="muted")
+
+np.random.seed(101)
+n = 300
+
+dados = {
+    'idade': np.random.normal(35, 10, n).astype(int),
+    'plano': np.random.choice(['Gratuito', 'Básico', 'Pro'], n, p=[0.5, 0.3, 0.2]),
+    'tempo_uso_horas': np.random.uniform(1, 50, n),
+    'bugs_reportados': np.random.poisson(2, n),
+    'satisfacao': np.random.randint(1, 11, n)
+}
+
+df_sistema = pd.DataFrame(dados)
+
+df_sistema.loc[df_sistema['plano'] == 'Pro', 'tempo_uso_horas'] += 15
+df_sistema.loc[df_sistema['plano'] == 'Pro', 'satisfacao'] += 2
+df_sistema['satisfacao'] = df_sistema['satisfacao'] - (df_sistema['bugs_reportados'] * 0.5)
+df_sistema['satisfacao'] = df_sistema['satisfacao'].clip(1, 10).astype(int)
+df_sistema['idade'] = df_sistema['idade'].clip(18, 70)
+
+OUT = '/mnt/user-data/outputs/'
+
+
+ordem_planos = df_sistema['plano'].value_counts().index
+
+plt.figure(figsize=(7, 5))
+sns.countplot(data=df_sistema, x='plano', order=ordem_planos)
+plt.title('Usuários por Tipo de Plano')
+plt.xlabel('Plano')
+plt.ylabel('Quantidade de Usuários')
+plt.tight_layout()
+plt.savefig(OUT + 'parte1_countplot_planos.png', dpi=150, bbox_inches='tight')
+
+
+plt.figure(figsize=(7, 5))
+sns.histplot(data=df_sistema, x='idade', kde=True)
+plt.title('Distribuição de Idade dos Usuários')
+plt.xlabel('Idade')
+plt.ylabel('Frequência')
+plt.tight_layout()
+plt.savefig(OUT + 'parte1_histplot_idade.png', dpi=150, bbox_inches='tight')
+
+
+plt.figure(figsize=(7, 5))
+sns.boxplot(data=df_sistema, x='plano', y='tempo_uso_horas')
+plt.title('Tempo de Uso por Plano')
+plt.xlabel('Plano')
+plt.ylabel('Tempo de Uso (horas)')
+plt.tight_layout()
+plt.savefig(OUT + 'parte2_boxplot_tempo_uso.png', dpi=150, bbox_inches='tight')
+
+
+plt.figure(figsize=(7, 5))
+sns.violinplot(data=df_sistema, x='plano', y='satisfacao')
+plt.title('Satisfação por Plano')
+plt.xlabel('Plano')
+plt.ylabel('Satisfação (1-10)')
+plt.tight_layout()
+plt.savefig(OUT + 'parte2_violinplot_satisfacao.png', dpi=150, bbox_inches='tight')
+
+
+plt.figure(figsize=(8, 6))
+sns.scatterplot(
+    data=df_sistema,
+    x='tempo_uso_horas',
+    y='satisfacao',
+    hue='plano',
+    size='bugs_reportados',
+    sizes=(20, 200),
+    alpha=0.7,
+)
+plt.title('Tempo de Uso x Satisfação')
+plt.xlabel('Tempo de Uso (horas)')
+plt.ylabel('Satisfação (1-10)')
+plt.tight_layout()
+plt.savefig(OUT + 'parte3_scatterplot.png', dpi=150, bbox_inches='tight')
+
+
+colunas_numericas = ['idade', 'tempo_uso_horas', 'bugs_reportados', 'satisfacao']
+matriz_corr = df_sistema[colunas_numericas].corr(method='pearson')
+
+plt.figure(figsize=(7, 6))
+sns.heatmap(matriz_corr, annot=True, cmap='coolwarm', center=0, fmt='.2f')
+plt.title('Correlação entre Variáveis Numéricas')
+plt.tight_layout()
+plt.savefig(OUT + 'parte3_heatmap_correlacao.png', dpi=150, bbox_inches='tight')
+
+
+pairplot = sns.pairplot(
+    df_sistema,
+    vars=['tempo_uso_horas', 'bugs_reportados', 'satisfacao'],
+    hue='plano',
+)
+pairplot.fig.suptitle('Relações entre Uso, Bugs e Satisfação', y=1.02)
+pairplot.savefig(OUT + 'parte3_pairplot.png', dpi=150, bbox_inches='tight')
+
+print('Gráficos gerados com sucesso em', OUT)
+print(matriz_corr)
